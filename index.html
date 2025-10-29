@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Undian Loyalitas v2</title>
+    <!-- Memuat Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat Google Font "Inter" -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Memuat Tone.js untuk efek suara -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.min.js"></script>
+    
+    <style>
+        /* Menggunakan font Inter sebagai default */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Latar belakang sedikit abu-abu */
+        }
+
+        /* --- Gaya Tampilan (View) --- */
+        .view {
+            display: none; /* Semua view disembunyikan by default */
+        }
+        .view.active {
+            display: block; /* View yang aktif akan ditampilkan */
+        }
+        
+        /* --- Gaya Kotak Pesan Kustom --- */
+        #customMessageBox, #deleteConfirmModal {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        /* --- Gaya Spinner --- */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 1rem;
+            height: 1rem;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* --- Gaya Visualizer Undian Baru --- */
+        #visualizer-stage {
+            background: linear-gradient(145deg, #232526, #414345);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+            border: 2px solid #555;
+            /* Tambahkan gradien atas & bawah untuk efek "fade" */
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+        }
+        
+        /* Jendela "Slot Machine" */
+        #visualizer-window {
+            height: 100px; /* Tinggi untuk satu nama */
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Reel yang berputar */
+        #visualizer-reel {
+            width: 100%;
+            /* Transisi akan di-handle oleh JavaScript untuk pengereman */
+        }
+        
+        .reel-item {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.25rem; /* 3xl */
+            font-weight: 800; /* extra-bold */
+            color: #fff;
+            letter-spacing: -0.05em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 1rem;
+            transition: all 0.3s ease; /* Transisi untuk efek hover/winner */
+        }
+        
+        /* Animasi "Terpilih" saat di-stop */
+        .reel-item.winner {
+            color: #fde047; /* Kuning cerah */
+            transform: scale(1.15);
+            text-shadow: 0 0 15px #fde047;
+        }
+        
+        /* Animasi Confetti Sederhana */
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100px) rotateZ(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotateZ(360deg); opacity: 0; }
+        }
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #fde047;
+            opacity: 0;
+            animation: confetti-fall 3s linear infinite;
+            z-index: 1000;
+        }
+        #confetti-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 999;
+        }
+        
+        /* Gaya untuk Fitur Hapus */
+        .delete-checkbox-container {
+            display: none; /* Sembunyi by default */
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+        }
+        tr.delete-mode .delete-checkbox-container {
+            display: flex; /* Tampil saat mode hapus aktif */
+        }
+        tr.delete-mode .customer-info {
+            opacity: 0.6; /* Redupkan info saat mode hapus */
+        }
+        tr.selected-for-delete {
+            background-color: #fee2e2; /* Sorot baris yang dipilih */
+        }
+        tr.selected-for-delete .customer-info {
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Kotak Pesan Kustom -->
+    <div id="customMessageBox" class="fixed top-5 right-5 z-[1001] p-4 rounded-md shadow-lg opacity-0 translate-x-10" style="display: none;">
+        <span id="messageText"></span>
+    </div>
+    
+    <!-- Modal Konfirmasi Hapus -->
+    <div id="deleteConfirmModal" class="fixed inset-0 z-[1000] flex items-center justify-center bg-black bg-opacity-50 p-4 opacity-0 scale-95" style="display: none;">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full">
+            <h3 class="text-lg font-bold text-gray-900">Konfirmasi Hapus</h3>
+            <p class="text-sm text-gray-600 mt-2">
+                Anda akan menghapus <strong id="deleteCount"></strong> pelanggan. Data ini akan hilang permanen.
+            </p>
+            <p class="text-sm text-gray-600 mt-1">Yakin ingin melanjutkan?</p>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button id="cancelDeleteModal" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">Batal</button>
+                <button id="confirmDeleteButton" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Ya, Hapus</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Kontainer Confetti -->
+    <div id="confetti-container"></div>
+
+    <!-- [VIEW 1] MENU UTAMA (DEFAULT) -->
+    <div id="view-menu" class="view active">
+        <div class="container mx-auto max-w-lg min-h-screen flex items-center justify-center p-4">
+            <div class="w-full text-center">
+                <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Sistem Undian Loyalitas</h1>
+                <p class="text-lg text-gray-600 mb-10">Selamat datang, Admin!</p>
+                
+                <div id="authStatusMenu" class="mb-6 text-center p-3 rounded-md text-white bg-blue-500">
+                    Menginisialisasi sistem...
+                </div>
+                
+                <div class="grid grid-cols-1 gap-6">
+                    <button data-target="view-admin" class="nav-button bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 px-4 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="text-2xl">Input Data Transaksi</span>
+                    </button>
+                    <button data-target="view-undian" id="nav-to-undian" class="nav-button bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-4 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="text-2xl">Buka Panel Undian</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- [VIEW 2] PANEL ADMIN (INPUT DATA) -->
+    <div id="view-admin" class="view">
+        <div class="container mx-auto p-4 md:p-8 max-w-7xl"> <!-- Dibuat lebih lebar (7xl) -->
+            <button data-target="view-menu" class="nav-button text-blue-600 hover:underline mb-4">&larr; Kembali ke Menu Utama</button>
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">Panel Admin: Input Data</h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Kolom Input -->
+                <div class="md:col-span-1 bg-white p-6 rounded-lg shadow-lg h-full flex flex-col">
+                    <form id="transactionForm" class="space-y-4 flex-grow">
+                        <div>
+                            <label for="customerPhone" class="block text-sm font-medium text-gray-700">Nomor Telepon (ID Unik)</label>
+                            <input type="tel" id="customerPhone" name="customerPhone" required
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                   placeholder="Cth: 08123456789">
+                        </div>
+                        <div>
+                            <label for="customerName" class="block text-sm font-medium text-gray-700">Nama Pelanggan</label>
+                            <input type="text" id="customerName" name="customerName" required
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                   placeholder="Cth: Budi Santoso">
+                        </div>
+                        <div>
+                            <label for="customerCode" class="block text-sm font-medium text-gray-700">Kode Pelanggan (Wajib)</label>
+                            <input type="text" id="customerCode" name="customerCode" required
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                   placeholder="Cth: KD0001">
+                        </div>
+                        <div>
+                            <label for="purchaseAmount" class="block text-sm font-medium text-gray-700">Jumlah Pembelian (IDR)</label>
+                            <input type="number" id="purchaseAmount" name="purchaseAmount" min="500000" step="1000" required
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                   placeholder="Min: 500000">
+                        </div>
+                        <button type="submit" id="submitButton" class="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <span id="submitText">Tambah Kupon</span>
+                            <span id="submitSpinner" class="spinner hidden"></span>
+                        </button>
+                    </form>
+                    <!-- Tombol Reset Kupon -->
+                    <div class="mt-8 border-t pt-4">
+                         <button id="resetCoupons" class="w-full py-2 px-4 rounded-md text-sm text-white font-medium bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            Reset Periode 6 Bulan (Mulai Baru)
+                        </button>
+                        <p class="text-xs text-gray-500 mt-2 text-center">Ini akan mengarsipkan dan mereset SEMUA kupon (bulanan dan total) untuk semua pelanggan.</p>
+                    </div>
+                </div>
+                
+                <!-- Kolom Daftar Pelanggan -->
+                <div class="md:col-span-2 bg-white p-6 rounded-lg shadow-lg h-full max-h-[800px] flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-800">Daftar Kupon Pelanggan</h2>
+                        <div class="flex space-x-2">
+                             <button id="filterMonthly" class="filter-button text-sm py-1 px-3 rounded-full bg-gray-200 text-gray-700">Bulan Ini</button>
+                             <button id="filterTotal" class="filter-button text-sm py-1 px-3 rounded-full bg-blue-100 text-blue-700">Total 6 Bulan</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Kontrol Hapus -->
+                    <div class="flex justify-between items-center mb-4 space-x-2">
+                        <button id="deleteButton" class="text-sm py-1 px-3 rounded-full bg-red-100 text-red-700 hover:bg-red-200">Hapus Pelanggan</button>
+                        <div id="deleteControls" class="hidden flex-grow justify-end space-x-2">
+                            <button id="cancelDeleteButton" class="text-sm py-1 px-3 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Batal</button>
+                            <button id="handleDeleteSelected" class="text-sm py-1 px-3 rounded-full bg-red-600 text-white hover:bg-red-700">Hapus yang Dipilih</button>
+                        </div>
+                    </div>
+                    
+                    <div id="customerTableLoader" class="text-center text-gray-500 py-10 flex-grow">
+                        Memuat data...
+                    </div>
+                    <div class="overflow-y-auto flex-grow hidden" id="customerTableContainer">
+                        <table class="min-w-full divide-y divide-gray-200" id="customerTable">
+                            <thead class="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th scope="col" class="pl-2 pr-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider delete-checkbox-container">
+                                        <!-- Checkbox Header -->
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pelanggan</th>
+                                    <!-- Diubah: Tgl Transaksi Terakhir -->
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tgl Transaksi Terakhir</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Belanja</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <span id="couponColumnTitle">Total Kupon</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="customerList" class="bg-white divide-y divide-gray-200">
+                                <!-- Data pelanggan akan diisi oleh JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- [VIEW 3] PANEL UNDIAN (VISUAL) -->
+    <div id="view-undian" class="view">
+        <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+            <button data-target="view-menu" class="nav-button text-blue-600 hover:underline mb-4">&larr; Kembali ke Menu Utama</button>
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Panel Undian Visual</h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <h3 class="font-bold text-lg text-blue-600">Hadiah Bulanan (Bulan Ini)</h3>
+                    <p class="text-gray-700">3x Pemenang Smartwatch</p>
+                    <ul id="winner-list-monthly" class="text-sm text-gray-600 mt-2 h-20 overflow-y-auto">
+                        <li>-</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <h3 class="font-bold text-lg text-purple-600">Hadiah Utama (6 Bulan)</h3>
+                    <p class="text-gray-700">1x Pemenang Motor/TV</p> 
+                    <ul id="winner-list-grand" class="text-sm text-gray-600 mt-2 h-20 overflow-y-auto">
+                        <li>-</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Visualizer Stage -->
+            <div id="visualizer-stage" class="relative">
+                <h2 id="draw-title" class="text-center text-xl font-semibold text-white mb-4">Tekan Tombol Undi</h2>
+                <p id="draw-stats" class="text-center text-sm text-gray-300 mb-4">(Hadiah: - | Pemenang: -)</p>
+                
+                <div id="visualizer-window">
+                    <div id="visualizer-reel">
+                        <div class="reel-item text-gray-400">Siap Mengundi...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tombol Kontrol Undian -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <button id="drawMonthly" class="draw-button w-full py-3 px-4 rounded-md text-white font-semibold bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-50">
+                    UNDI BULANAN
+                </button>
+                <button id="drawGrand" class="draw-button w-full py-3 px-4 rounded-md text-white font-semibold bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-600 transition-all disabled:opacity-50">
+                    UNDI HADIAH UTAMA
+                </button>
+                <button id="stopDraw" class="w-full md:col-span-3 py-4 px-4 rounded-md text-white font-extrabold text-2xl bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all hidden animate-pulse">
+                    !! STOP UNDIAN !!
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Firebase SDK Scripts -->
+    <script type="module">
+        // Import fungsi-fungsi yang kita butuhkan dari Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
+            collection, query, where, onSnapshot, getDocs, writeBatch, serverTimestamp, setLogLevel, arrayUnion
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- KONFIGURASI FIREBASE ---
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-loyalty-app-v2';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Inisialisasi Firebase
+        let app, db, auth;
+        let userId = null;
+        let customersRef = null;
+
+        // Global state
+        let currentCustomerData = []; // Menyimpan data mentah dari snapshot
+        let unsubscribeSnapshot = null;
+        let activeView = 'view-menu';
+        let currentTableFilter = 'total'; // 'total' or 'monthly'
+        let isDeleting = false; // Status mode hapus
+
+        // DOM Elements
+        const views = document.querySelectorAll('.view');
+        const navButtons = document.querySelectorAll('.nav-button');
+        const authStatusMenu = document.getElementById('authStatusMenu');
+        
+        // Admin View
+        const transactionForm = document.getElementById('transactionForm');
+        const customerNameInput = document.getElementById('customerName');
+        const purchaseAmountInput = document.getElementById('purchaseAmount');
+        const customerPhoneInput = document.getElementById('customerPhone');
+        const customerCodeInput = document.getElementById('customerCode');
+        const submitButton = document.getElementById('submitButton');
+        const submitText = document.getElementById('submitText');
+        const submitSpinner = document.getElementById('submitSpinner');
+        const customerTable = document.getElementById('customerTable');
+        const customerTableContainer = document.getElementById('customerTableContainer');
+        const customerTableLoader = document.getElementById('customerTableLoader');
+        const customerList = document.getElementById('customerList');
+        const filterMonthlyButton = document.getElementById('filterMonthly');
+        const filterTotalButton = document.getElementById('filterTotal');
+        const couponColumnTitle = document.getElementById('couponColumnTitle');
+        const resetButton = document.getElementById('resetCoupons');
+        
+        // Delete Feature DOM
+        const deleteButton = document.getElementById('deleteButton');
+        const deleteControls = document.getElementById('deleteControls');
+        const cancelDeleteButton = document.getElementById('cancelDeleteButton');
+        const handleDeleteSelectedButton = document.getElementById('handleDeleteSelected');
+        const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+        const cancelDeleteModalButton = document.getElementById('cancelDeleteModal');
+        const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+        const deleteCountSpan = document.getElementById('deleteCount');
+        
+        // Undian View
+        const navToUndianButton = document.getElementById('nav-to-undian');
+        const drawMonthlyButton = document.getElementById('drawMonthly');
+        const drawGrandButton = document.getElementById('drawGrand');
+        const stopDrawButton = document.getElementById('stopDraw');
+        const drawTitle = document.getElementById('draw-title');
+        const drawStats = document.getElementById('draw-stats');
+        const visualizerReel = document.getElementById('visualizer-reel');
+        const winnerListMonthly = document.getElementById('winner-list-monthly');
+        const winnerListGrand = document.getElementById('winner-list-grand');
+        
+        // --- State Undian ---
+        let isDrawing = false; // Status reel berputar
+        let isStopping = false; // Status pengereman
+        let isDrawSessionActive = false; // Status sesi (misal: Bulanan) aktif
+        let activeAnimationId = null;
+        let currentLotteryHat = [];
+        let customerMap = {}; // { '08123': 'Budi (KD001)' }
+        let currentDrawType = ''; // 'monthly' or 'grand'
+        let targetWinners = 0;
+        let currentWinners = [];
+        let reelPosition = 0;
+        const itemHeight = 100; // Cocokkan dengan CSS
+        const spinVelocity = 25; // Kecepatan putaran konstan (piksel per frame)
+        
+        // --- Efek Suara (Tone.js) ---
+        let spinSynth = null;
+        let winSynth = null;
+        let audioInitialized = false;
+
+        // Fungsi inisialisasi suara (DIPANGGIL OLEH KLIK PENGGUNA)
+        async function initializeSounds() {
+            if (audioInitialized || typeof Tone === 'undefined') return;
+            
+            try {
+                await Tone.start();
+                
+                // Suara klik saat berputar (dibuat loop)
+                spinSynth = new Tone.NoiseSynth({
+                    noise: { type: 'white' },
+                    envelope: { attack: 0.001, decay: 0.05, sustain: 0 }
+                }).toDestination();
+                
+                // Suara pemenang
+                winSynth = new Tone.PolySynth(Tone.Synth, {
+                    volume: -10,
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 }
+                }).toDestination();
+                
+                audioInitialized = true;
+                console.log("Konteks audio berhasil diinisialisasi.");
+                
+            } catch (error) {
+                console.error("Gagal menginisialisasi audio (Tone.js):", error);
+            }
+        }
+        
+        // Fungsi easing untuk pengereman
+        function easeOutQuad(t) { return t * (2 - t); }
+
+        // --- FUNGSI UTAMA (Auth & Setup) ---
+
+        async function initializeAppAndAuth() {
+            if (!firebaseConfig.apiKey) {
+                authStatusMenu.textContent = "Error: Konfigurasi Firebase tidak ditemukan.";
+                authStatusMenu.classList.replace('bg-blue-500', 'bg-red-500');
+                disableApp();
+                return;
+            }
+            
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // setLogLevel('debug');
+
+                authStatusMenu.textContent = "Mengautentikasi...";
+                
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                userId = auth.currentUser.uid;
+                authStatusMenu.textContent = `Terhubung (ID Sesi: ${userId.substring(0, 8)})`;
+                authStatusMenu.classList.replace('bg-blue-500', 'bg-green-600');
+
+                // Diubah: Nama koleksi baru untuk v3 dengan riwayat
+                const collectionPath = `/artifacts/${appId}/users/${userId}/customers_v3`;
+                customersRef = collection(db, collectionPath);
+
+                setupFirestoreListener();
+                enableApp();
+
+            } catch (error) {
+                console.error("Error inisialisasi Firebase:", error);
+                authStatusMenu.textContent = `Error: ${error.message}`;
+                authStatusMenu.classList.replace('bg-blue-500', 'bg-red-500');
+                disableApp();
+            }
+        }
+        
+        function disableApp() {
+            document.querySelectorAll('.nav-button').forEach(btn => btn.disabled = true);
+            submitButton.disabled = true;
+        }
+        
+        function enableApp() {
+             document.querySelectorAll('.nav-button').forEach(btn => btn.disabled = false);
+             submitButton.disabled = false;
+        }
+
+        // --- Navigasi Tampilan (View) ---
+        
+        function switchView(targetViewId) {
+            views.forEach(view => {
+                view.classList.remove('active');
+            });
+            const targetView = document.getElementById(targetViewId);
+            if (targetView) {
+                targetView.classList.add('active');
+                activeView = targetViewId;
+                
+                // Reset undian jika kembali ke menu
+                if (targetViewId === 'view-menu' && (isDrawing || isStopping || isDrawSessionActive)) {
+                    resetDrawSession();
+                }
+            }
+        }
+
+        // --- Listener Database ---
+
+        function setupFirestoreListener() {
+            if (!customersRef) return;
+            if (unsubscribeSnapshot) unsubscribeSnapshot();
+
+            const q = query(customersRef);
+            customerTableLoader.textContent = "Menyambungkan ke database...";
+
+            unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
+                currentCustomerData = []; // Reset data global
+                querySnapshot.forEach(doc => {
+                    currentCustomerData.push(doc); // Simpan seluruh dokumen
+                });
+                
+                renderCustomerList(); // Render tabel dengan filter saat ini
+
+            }, (error) => {
+                console.error("Error mendengarkan snapshot:", error);
+                showMessage(`Error database: ${error.message}`, 'error');
+                customerTableLoader.textContent = "Error memuat data.";
+            });
+        }
+        
+        // Helper format Rupiah
+        function formatRupiah(number) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(number);
+        }
+        
+        function renderCustomerList() {
+            customerList.innerHTML = ''; // Kosongkan tabel
+            
+            const monthYear = new Date().toISOString().slice(0, 7);
+            
+            let dataToRender = currentCustomerData.map(doc => {
+                const data = doc.data();
+                let coupons = 0;
+                if (currentTableFilter === 'monthly') {
+                    coupons = data.coupons?.[monthYear] || 0;
+                    couponColumnTitle.textContent = `Kupon Bulan Ini (${monthYear})`;
+                } else {
+                    coupons = data.grandTotalCoupons || 0;
+                    couponColumnTitle.textContent = `Total Kupon (6 Bulan)`;
+                }
+                return { doc, data, coupons };
+            });
+
+            // Sortir data berdasarkan jumlah kupon (descending)
+            const sortedData = dataToRender.sort((a, b) => b.coupons - a.coupons);
+
+            if (sortedData.length === 0) {
+                customerList.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Belum ada data pelanggan.</td></tr>';
+            }
+
+            sortedData.forEach(item => {
+                const customer = item.data;
+                const doc = item.doc;
+                const tr = document.createElement('tr');
+                tr.dataset.docId = doc.id; // Simpan doc id di <tr>
+                
+                // Format tanggal transaksi terakhir
+                let lastTransactionDate = '---';
+                if (customer.lastTransactionDate) {
+                    const ts = customer.lastTransactionDate;
+                    lastTransactionDate = new Date(ts.seconds * 1000).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+                }
+
+                tr.innerHTML = `
+                    <td class="pl-2 pr-2 py-4 delete-checkbox-container">
+                        <input type="checkbox" data-doc-id="${doc.id}" class="customer-checkbox h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap customer-info">
+                        <div class="text-sm font-medium text-gray-900">${customer.customerName}</div>
+                        <div class="text-sm text-gray-500">${customer.customerCode} | ${customer.customerPhone}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap customer-info">
+                        <!-- Kolom Tgl Transaksi Terakhir -->
+                        <div class="text-sm text-gray-500">${lastTransactionDate}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap customer-info">
+                        <div class="text-sm text-gray-900 font-medium">${formatRupiah(customer.totalPurchase || 0)}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap customer-info">
+                        <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${item.coupons > 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
+                            ${item.coupons} Kupon
+                        </span>
+                    </td>
+                `;
+                
+                // Tambahkan listener klik di baris untuk memilih (jika mode hapus)
+                tr.addEventListener('click', (e) => {
+                    if (isDeleting && e.target.type !== 'checkbox') {
+                        const checkbox = tr.querySelector('.customer-checkbox');
+                        checkbox.checked = !checkbox.checked;
+                        // Update visual selection
+                        tr.classList.toggle('selected-for-delete', checkbox.checked);
+                    }
+                });
+                
+                customerList.appendChild(tr);
+            });
+            
+            customerTableLoader.style.display = 'none';
+            customerTableContainer.classList.remove('hidden');
+            
+            // Terapkan kembali delete mode jika aktif
+            toggleDeleteMode(isDeleting, true);
+        }
+        
+        function updateFilterButtons() {
+            if (currentTableFilter === 'monthly') {
+                filterMonthlyButton.classList.replace('bg-gray-200', 'bg-blue-100');
+                filterMonthlyButton.classList.replace('text-gray-700', 'text-blue-700');
+                filterTotalButton.classList.replace('bg-blue-100', 'bg-gray-200');
+                filterTotalButton.classList.replace('text-blue-700', 'text-gray-700');
+            } else {
+                filterTotalButton.classList.replace('bg-gray-200', 'bg-blue-100');
+                filterTotalButton.classList.replace('text-gray-700', 'text-blue-700');
+                filterMonthlyButton.classList.replace('bg-blue-100', 'bg-gray-200');
+                filterMonthlyButton.classList.replace('text-blue-700', 'text-gray-700');
+            }
+        }
+
+        // --- FUNGSI BISNIS (Submit) ---
+
+        async function handleTransactionSubmit(e) {
+            e.preventDefault();
+            if (!customersRef) {
+                showMessage("Database belum siap. Silakan coba lagi.", 'error');
+                return;
+            }
+
+            const customerName = customerNameInput.value.trim();
+            const purchaseAmount = parseInt(purchaseAmountInput.value, 10);
+            const customerPhone = customerPhoneInput.value.trim();
+            const customerCode = customerCodeInput.value.trim(); // Wajib
+
+            if (!customerName || !purchaseAmount || !customerPhone || !customerCode) {
+                showMessage("Semua kolom (Nama, Kode, Telepon, Jumlah) tidak boleh kosong.", 'error');
+                return;
+            }
+
+            const newCoupons = Math.floor(purchaseAmount / 500000);
+            if (newCoupons <= 0) {
+                showMessage("Jumlah pembelian tidak cukup untuk mendapatkan kupon (min 500.000).", 'warning');
+                return;
+            }
+
+            setLoading(true);
+            const monthYear = new Date().toISOString().slice(0, 7);
+            const transactionTimestamp = serverTimestamp(); // Timestamp untuk 'lastTransactionDate'
+
+            try {
+                const q = query(customersRef, where("customerPhone", "==", customerPhone));
+                const querySnapshot = await getDocs(q);
+
+                // Buat data transaksi baru
+                const newTransaction = {
+                    date: new Date(), // <-- PERBAIKAN: Gunakan new Date() untuk di dalam array
+                    amount: purchaseAmount,
+                    couponsGained: newCoupons,
+                    monthKey: monthYear
+                };
+
+                if (querySnapshot.empty) {
+                    // Pelanggan baru
+                    const newData = {
+                        customerName: customerName,
+                        customerPhone: customerPhone,
+                        customerCode: customerCode,
+                        grandTotalCoupons: newCoupons,
+                        totalPurchase: purchaseAmount, 
+                        coupons: {
+                            [monthYear]: newCoupons 
+                        },
+                        lastTransactionDate: transactionTimestamp, // Tgl transaksi terakhir (server)
+                        transactionHistory: [newTransaction] // Riwayat transaksi (client)
+                    };
+                    await addDoc(customersRef, newData);
+                    showMessage(`${customerName} mendapatkan ${newCoupons} kupon baru untuk bulan ${monthYear}!`, 'success');
+                } else {
+                    // Pelanggan lama, update kupon
+                    const docRef = querySnapshot.docs[0].ref;
+                    const currentData = querySnapshot.docs[0].data();
+                    
+                    const currentMonthlyCoupons = currentData.coupons?.[monthYear] || 0;
+                    const newMonthlyCoupons = currentMonthlyCoupons + newCoupons;
+                    
+                    const currentGrandTotal = currentData.grandTotalCoupons || 0;
+                    const newGrandTotal = currentGrandTotal + newCoupons;
+                    
+                    const currentTotalPurchase = currentData.totalPurchase || 0;
+                    const newTotalPurchase = currentTotalPurchase + purchaseAmount;
+                    
+                    const updateData = {
+                        customerName: customerName, 
+                        customerCode: customerCode, // Update kode jika berubah
+                        grandTotalCoupons: newGrandTotal,
+                        totalPurchase: newTotalPurchase, // Update total belanja
+                        coupons: {
+                            ...currentData.coupons, 
+                            [monthYear]: newMonthlyCoupons 
+                        },
+                        lastTransactionDate: transactionTimestamp, // Update tgl transaksi terakhir (server)
+                        transactionHistory: arrayUnion(newTransaction) // Tambah ke riwayat (client)
+                    };
+                    
+                    await updateDoc(docRef, updateData);
+                    showMessage(`${customerName} mendapat ${newCoupons} kupon. Total bulan ini: ${newMonthlyCoupons}. Total 6 bulan: ${newGrandTotal}.`, 'success');
+                }
+                
+                transactionForm.reset();
+
+            } catch (error) {
+                console.error("Error menambah/update kupon:", error);
+                showMessage(`Gagal menyimpan data: ${error.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        // --- FUNGSI HAPUS PELANGGAN ---
+        
+        function toggleDeleteMode(enable, forceRender = false) {
+            if (enable === isDeleting && !forceRender) return; // Tidak ada perubahan
+            
+            isDeleting = enable;
+            const rows = customerList.querySelectorAll('tr');
+            
+            if (isDeleting) {
+                deleteButton.classList.add('hidden');
+                deleteControls.classList.remove('hidden');
+                deleteControls.classList.add('flex');
+                rows.forEach(row => row.classList.add('delete-mode'));
+                customerTable.querySelectorAll('.delete-checkbox-container').forEach(th => th.style.display = 'table-cell');
+            } else {
+                deleteButton.classList.remove('hidden');
+                deleteControls.classList.add('hidden');
+                deleteControls.classList.remove('flex');
+                rows.forEach(row => {
+                    row.classList.remove('delete-mode', 'selected-for-delete');
+                    const checkbox = row.querySelector('.customer-checkbox');
+                    if(checkbox) checkbox.checked = false;
+                });
+                customerTable.querySelectorAll('.delete-checkbox-container').forEach(th => th.style.display = 'none');
+            }
+        }
+        
+        function showDeleteConfirmation() {
+            const selectedIds = Array.from(document.querySelectorAll('.customer-checkbox:checked')).map(cb => cb.dataset.docId);
+            
+            if (selectedIds.length === 0) {
+                showMessage("Pilih setidaknya satu pelanggan untuk dihapus.", 'warning');
+                return;
+            }
+            
+            deleteCountSpan.textContent = `${selectedIds.length}`;
+            deleteConfirmModal.style.display = 'flex';
+            setTimeout(() => {
+                deleteConfirmModal.classList.add('opacity-100', 'scale-100');
+                deleteConfirmModal.classList.remove('opacity-0', 'scale-95');
+            }, 10);
+        }
+        
+        function hideDeleteConfirmation() {
+            deleteConfirmModal.classList.add('opacity-0', 'scale-95');
+            deleteConfirmModal.classList.remove('opacity-100', 'scale-100');
+            setTimeout(() => {
+                deleteConfirmModal.style.display = 'none';
+            }, 300);
+        }
+        
+        async function performDelete() {
+            const selectedIds = Array.from(document.querySelectorAll('.customer-checkbox:checked')).map(cb => cb.dataset.docId);
+            if (selectedIds.length === 0) return;
+            
+            hideDeleteConfirmation();
+            setLoading(true); // Gunakan spinner tombol utama
+            
+            try {
+                const batch = writeBatch(db);
+                selectedIds.forEach(id => {
+                    const docRef = doc(customersRef, id); // Dapatkan referensi dokumen
+                    batch.delete(docRef);
+                });
+                await batch.commit();
+                
+                showMessage(`Berhasil menghapus ${selectedIds.length} pelanggan.`, 'success');
+                
+            } catch (error) {
+                console.error("Error menghapus pelanggan:", error);
+                showMessage(`Gagal menghapus: ${error.message}`, 'error');
+            } finally {
+                setLoading(false);
+                toggleDeleteMode(false); // Keluar dari mode hapus
+            }
+        }
+        
+        
+        // --- FUNGSI UNDIAN VISUAL ---
+        
+        function buildLotteryHat(type) {
+            currentLotteryHat = [];
+            customerMap = {};
+            const monthYear = new Date().toISOString().slice(0, 7);
+            
+            currentCustomerData.forEach(doc => {
+                const data = doc.data();
+                const id = data.customerPhone; // ID unik
+                
+                // Jangan ikutkan pemenang sebelumnya (jika ada)
+                if (currentWinners.find(winner => winner.id === id)) {
+                    return; 
+                }
+                
+                let couponsToUse = 0;
+                if (type === 'monthly') {
+                    couponsToUse = data.coupons?.[monthYear] || 0;
+                } else { // 'grand'
+                    couponsToUse = data.grandTotalCoupons || 0;
+                }
+                
+                if (couponsToUse > 0) {
+                    const name = `${data.customerName} (${data.customerCode})`; // Kode wajib
+                    customerMap[id] = name; 
+                    
+                    for (let i = 0; i < couponsToUse; i++) {
+                        currentLotteryHat.push(id);
+                    }
+                }
+            });
+            
+            // Acak topi undian
+            for (let i = currentLotteryHat.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [currentLotteryHat[i], currentLotteryHat[j]] = [currentLotteryHat[j], currentLotteryHat[i]];
+            }
+        }
+        
+        // Memulai putaran baru untuk pemenang berikutnya
+        function startDrawRound(type) {
+            if (isDrawing || isStopping) return; // Jangan mulai jika sedang berputar/berhenti
+            
+            // Jika ini putaran baru (bukan lanjutan dari sesi manual)
+            if (!isDrawSessionActive || type !== currentDrawType) {
+                isDrawSessionActive = true;
+                currentDrawType = type;
+                currentWinners = []; // Reset pemenang jika sesi baru
+                
+                if (type === 'monthly') {
+                    targetWinners = 3;
+                    winnerListMonthly.innerHTML = '<li>Mencari pemenang...</li>';
+                    winnerListGrand.innerHTML = '<li>-</li>';
+                } else {
+                    targetWinners = 1;
+                    winnerListGrand.innerHTML = '<li>Mencari pemenang...</li>';
+                    winnerListMonthly.innerHTML = '<li>-</li>';
+                }
+            }
+            
+            // Cek apakah target pemenang sudah tercapai
+            if (currentWinners.length >= targetWinners) {
+                showMessage(`Undian ${currentDrawType === 'monthly' ? 'Bulanan' : 'Utama'} sudah selesai. ${targetWinners} pemenang telah ditemukan.`, 'success');
+                resetDrawSession();
+                return;
+            }
+            
+            // Bangun topi undian, *tidak termasuk pemenang sebelumnya*
+            buildLotteryHat(type);
+            
+            if (currentLotteryHat.length === 0) {
+                const msg = type === 'monthly' ? `Bulan Ini (${new Date().toISOString().slice(0, 7)})` : "6 Bulan";
+                showMessage(`Tidak ada lagi kupon untuk diundi di undian ${msg}.`, 'error');
+                resetDrawSession(); 
+                return;
+            }
+            
+            isDrawing = true;
+            isStopping = false; 
+            toggleDrawButtons(true); // Nonaktifkan tombol utama
+            
+            const round = currentWinners.length + 1;
+            drawTitle.textContent = `Mencari Pemenang ke-${round} dari ${targetWinners}`;
+            const prize = currentDrawType === 'monthly' ? 'Smartwatch' : 'Motor/TV';
+            drawStats.textContent = `(Hadiah: ${prize} | Kupon Tersisa: ${currentLotteryHat.length})`;
+            
+            // Isi reel visualizer
+            populateVisualizerReel();
+            
+            // Mulai putaran
+            startReelAnimation();
+            
+            // Tampilkan tombol STOP
+            stopDrawButton.classList.remove('hidden');
+        }
+        
+        function populateVisualizerReel() {
+            visualizerReel.innerHTML = '';
+            // Buat daftar yang jauh lebih panjang dari topi untuk efek visual
+            const reelItems = [];
+            // Pastikan kita punya minimal ~100 item untuk diputar
+            const minReelSize = 100;
+            let i = 0;
+            
+            if (currentLotteryHat.length === 0) {
+                visualizerReel.appendChild(createReelItem("Kupon Habis", ""));
+                return;
+            }
+            
+            // Ambil semua nama unik dari customerMap yang ada di topi
+            const uniqueNamesInHat = [...new Set(currentLotteryHat)].map(id => ({ id: id, name: customerMap[id] }));
+
+            // Isi reel dengan nama-nama unik tersebut
+            while(reelItems.length < minReelSize) {
+                const item = uniqueNamesInHat[i % uniqueNamesInHat.length];
+                reelItems.push(item);
+                i++;
+            }
+            
+            // Acak daftar reel agar visualnya tidak urut
+            for (let i = reelItems.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [reelItems[i], reelItems[j]] = [reelItems[j], reelItems[i]];
+            }
+            
+            // Buat elemen DOM (2 set untuk loop)
+            const createSet = () => {
+                reelItems.forEach(item => {
+                    visualizerReel.appendChild(createReelItem(item.name, item.id));
+                });
+            };
+            createSet();
+            createSet(); // Duplikat untuk loop tak terbatas
+        }
+        
+        function createReelItem(name, id) {
+             const item = document.createElement('div');
+             item.className = 'reel-item';
+             item.textContent = name;
+             item.dataset.id = id; // Simpan ID di elemen
+             return item;
+        }
+
+        // FUNGSI PUTARAN KONSTAN
+        function startReelAnimation() {
+            if (!isDrawing || !visualizerReel) return;
+            
+            reelPosition += spinVelocity; // Kecepatan konstan
+            
+            const totalReelHeight = visualizerReel.scrollHeight / 2;
+            
+            if (totalReelHeight > 0) {
+                if (reelPosition >= totalReelHeight) {
+                    reelPosition -= totalReelHeight;
+                }
+            }
+            
+            visualizerReel.style.transform = `translateY(-${reelPosition}px)`;
+            
+            // Suara klik
+            if (spinSynth && Math.random() > 0.5) {
+                try { spinSynth.triggerAttackRelease("8n"); } catch(e) {}
+            }
+            
+            activeAnimationId = requestAnimationFrame(startReelAnimation);
+        }
+
+        // FUNGSI STOP (PENGEREMAN)
+        function cinematicStop() {
+            // Hanya bisa distop jika sedang berputar (isDrawing) dan belum pengereman (isStopping)
+            if (!isDrawing || isStopping || !activeAnimationId) return;
+            
+            isDrawing = false; // Hentikan loop animasi dasar
+            isStopping = true; // Masuk mode pengereman
+            cancelAnimationFrame(activeAnimationId);
+            activeAnimationId = null;
+            
+            // Sembunyikan tombol STOP
+            stopDrawButton.classList.add('hidden');
+            
+            // 1. Pilih pemenang SEBENARNYA dari topi
+            const winnerId = currentLotteryHat[Math.floor(Math.random() * currentLotteryHat.length)];
+            const winnerName = customerMap[winnerId];
+            
+            // 2. Tambahkan pemenang ke daftar
+            currentWinners.push({ id: winnerId, name: winnerName });
+            
+            // 3. Cari elemen pemenang di reel (cari di set kedua untuk loop)
+            const reelItems = Array.from(visualizerReel.children);
+            const totalReelHeight = visualizerReel.scrollHeight / 2;
+            let targetChild = null;
+
+            for (let i = Math.floor(reelItems.length / 2); i < reelItems.length; i++) {
+                 if (reelItems[i].dataset.id === winnerId) {
+                    targetChild = reelItems[i];
+                    break;
+                 }
+            }
+            
+            // Fallback jika tidak ketemu
+            if (!targetChild) {
+                targetChild = reelItems[reelItems.length - 5];
+            }
+            
+            // --- Logika Pengereman Sinematik ---
+            const startTime = performance.now();
+            const duration = 5000; // Durasi pengereman 5 detik
+            
+            const visualizerHeight = visualizerReel.clientHeight; 
+            const targetOffsetTop = targetChild.offsetTop;
+            const targetPosition = targetOffsetTop - (visualizerHeight / 2) + (itemHeight / 2);
+            const startPosition = reelPosition;
+
+            // Tentukan endPosition terdekat di MASA DEPAN
+            const currentRevolutionOffset = startPosition % totalReelHeight;
+            let endPosition = startPosition + (targetPosition - currentRevolutionOffset);
+
+            if (targetPosition < currentRevolutionOffset) {
+                endPosition += totalReelHeight;
+            }
+            
+            endPosition += (totalReelHeight * 2); // Tambah 2 putaran ekstra
+
+            // Tandai elemen pemenang
+            targetChild.classList.add('winner');
+            const firstSetWinner = reelItems.find(el => el.dataset.id === winnerId);
+            if(firstSetWinner) firstSetWinner.classList.add('winner');
+
+            // Mulai animasi pengereman
+            animateStop(startTime, duration, startPosition, endPosition, winnerId);
+        }
+        
+        function animateStop(startTime, duration, startPosition, endPosition, winnerId) {
+            const now = performance.now();
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            const easedProgress = easeOutQuad(progress); // Efek pengereman
+            reelPosition = startPosition + (endPosition - startPosition) * easedProgress;
+            
+            visualizerReel.style.transform = `translateY(-${reelPosition}px)`;
+            
+            if (progress < 1) {
+                activeAnimationId = requestAnimationFrame(() => animateStop(startTime, duration, startPosition, endPosition, winnerId));
+            } else {
+                // Animasi selesai
+                reelPosition = endPosition; // Snap ke posisi akhir
+                visualizerReel.style.transform = `translateY(-${reelPosition}px)`;
+                
+                if (spinSynth) spinSynth.triggerAttackRelease(0); // Hentikan noise
+                if (winSynth) {
+                    try { winSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "0.8s", Tone.now() + 0.1); } catch(e) {}
+                }
+                startConfetti();
+                
+                const winnerName = customerMap[winnerId];
+                drawTitle.textContent = `🎉 Pemenang ke-${currentWinners.length}: ${winnerName}! 🎉`;
+                updateWinnerLists();
+                
+                // Reset status pengereman, siap untuk putaran berikutnya
+                isStopping = false; 
+                
+                // Logika Lanjutan: Cek apakah sesi selesai
+                if (currentWinners.length >= targetWinners) {
+                    // Sesi Selesai
+                    showMessage(`Undian ${currentDrawType === 'monthly' ? 'Bulanan' : 'Utama'} telah selesai!`, 'success');
+                    isDrawSessionActive = false;
+                    toggleDrawButtons(false); // Aktifkan tombol utama
+                } else {
+                    // Masih ada pemenang lagi, aktifkan tombol undi lagi
+                    toggleDrawButtons(false); 
+                    drawStats.textContent = `Siap mencari pemenang ke-${currentWinners.length + 1}`;
+                }
+
+                setTimeout(stopConfetti, 4000); // Hentikan confetti setelah 4 detik
+            }
+        }
+        
+        // Reset Sesi Undian Penuh
+        function resetDrawSession() {
+            isDrawing = false;
+            isStopping = false;
+            isDrawSessionActive = false;
+            if (activeAnimationId) cancelAnimationFrame(activeAnimationId);
+            activeAnimationId = null;
+            
+            toggleDrawButtons(false);
+            stopDrawButton.classList.add('hidden'); // Sembunyikan tombol stop
+            
+            drawTitle.textContent = "Tekan Tombol Undi";
+            drawStats.textContent = "(Hadiah: - | Pemenang: -)";
+            visualizerReel.innerHTML = '<div class="reel-item text-gray-400">Siap Mengundi...</div>';
+            visualizerReel.style.transform = 'translateY(0)';
+            
+            winnerListMonthly.innerHTML = '<li>-</li>';
+            winnerListGrand.innerHTML = '<li>-</li>';
+            
+            currentWinners = [];
+            currentDrawType = '';
+            targetWinners = 0;
+            stopConfetti();
+        }
+        
+        function updateWinnerLists() {
+            const listId = currentDrawType === 'monthly' ? winnerListMonthly : winnerListGrand;
+            listId.innerHTML = '';
+            currentWinners.forEach((winner, index) => {
+                const li = document.createElement('li');
+                li.textContent = `Pemenang ${index + 1}: ${winner.name}`;
+                listId.appendChild(li);
+            });
+        }
+        
+        // --- FUNGSI RESET PERIODE ---
+        
+        async function handleResetCoupons() {
+            if (isDrawing || isStopping || isDrawSessionActive) {
+                showMessage("Tidak dapat mereset saat undian berlangsung.", 'error');
+                return;
+            }
+            
+            showMessage("Memulai proses reset periode 6 bulan...", 'warning');
+            
+            if (currentCustomerData.length === 0) {
+                showMessage("Tidak ada data untuk direset.", 'warning');
+                return;
+            }
+
+            try {
+                const batch = writeBatch(db);
+                
+                currentCustomerData.forEach(doc => {
+                    const docRef = doc.ref;
+                    const data = doc.data();
+                    
+                    // Simpan data lama ke arsip
+                    const archiveData = {
+                        archivedCoupons: data.coupons || {},
+                        archivedGrandTotal: data.grandTotalCoupons || 0,
+                        archivedTotalPurchase: data.totalPurchase || 0,
+                        archivedOn: new Date().toISOString(),
+                        archivedHistory: data.transactionHistory || []
+                    };
+                    
+                    batch.update(docRef, { 
+                        coupons: {}, 
+                        grandTotalCoupons: 0,
+                        totalPurchase: 0, // Reset total belanja
+                        transactionHistory: [], // Reset riwayat
+                        archive: archiveData,
+                        lastTransactionDate: serverTimestamp()
+                    });
+                });
+                
+                await batch.commit();
+                
+                showMessage("Periode 6 Bulan telah direset. Semua kupon, total belanja, dan riwayat kembali ke 0.", 'success');
+                resetDrawSession(); // Reset total
+                
+            } catch (error)
+{
+                console.error("Error resetting period:", error);
+                showMessage(`Gagal mereset periode: ${error.message}`, 'error');
+            }
+        }
+        
+        // --- FUNGSI HELPER (UI) ---
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                submitButton.disabled = true;
+                submitText.classList.add('hidden');
+                submitSpinner.classList.remove('hidden');
+            } else {
+                submitButton.disabled = false;
+                submitText.classList.remove('hidden');
+                submitSpinner.classList.add('hidden');
+            }
+        }
+        
+        function showMessage(message, type = 'success') {
+            const messageBox = document.getElementById('customMessageBox');
+            const messageText = document.getElementById('messageText');
+            
+            messageText.textContent = message;
+            
+            messageBox.classList.remove('bg-green-500', 'bg-red-500', 'bg-yellow-500', 'text-white', 'text-gray-800');
+            
+            if (type === 'success') messageBox.classList.add('bg-green-500', 'text-white');
+            else if (type === 'error') messageBox.classList.add('bg-red-500', 'text-white');
+            else if (type === 'warning') messageBox.classList.add('bg-yellow-500', 'text-gray-800');
+            
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.classList.add('opacity-100', 'translate-x-0');
+                messageBox.classList.remove('opacity-0', 'translate-x-10');
+            }, 10);
+
+            setTimeout(() => {
+                messageBox.classList.add('opacity-0', 'translate-x-10');
+                messageBox.classList.remove('opacity-100', 'translate-x-0');
+                 setTimeout(() => { messageBox.style.display = 'none'; }, 300);
+            }, 4000);
+        }
+        
+        function toggleDrawButtons(isSpinningOrStopping) {
+             document.querySelectorAll('.draw-button').forEach(btn => {
+                btn.disabled = isSpinningOrStopping;
+                if(isSpinningOrStopping) btn.classList.add('opacity-50', 'cursor-not-allowed');
+                else btn.classList.remove('opacity-50', 'cursor-not-allowed');
+             });
+        }
+        
+        // --- Confetti ---
+        let confettiInterval = null;
+        function startConfetti() {
+            const container = document.getElementById('confetti-container');
+            stopConfetti(); // Hentikan jika sudah berjalan
+            confettiInterval = setInterval(() => {
+                for (let i = 0; i < 5; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = `${Math.random() * 100}vw`;
+                    confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                    confetti.style.animationDelay = `${Math.random() * 2}s`;
+                    confetti.style.width = `${Math.random() * 10 + 5}px`;
+                    confetti.style.height = confetti.style.width;
+                    confetti.style.opacity = Math.random() + 0.5;
+                    container.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 3000);
+                }
+            }, 200);
+        }
+        function stopConfetti() {
+            clearInterval(confettiInterval);
+        }
+
+        // --- EVENT LISTENERS ---
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeAppAndAuth();
+            
+            navButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetViewId = button.getAttribute('data-target');
+                    switchView(targetViewId);
+                });
+            });
+
+            navToUndianButton.addEventListener('click', () => {
+                initializeSounds(); 
+            });
+            
+            // Listener panel admin
+            transactionForm.addEventListener('submit', handleTransactionSubmit);
+            filterMonthlyButton.addEventListener('click', () => {
+                currentTableFilter = 'monthly';
+                updateFilterButtons();
+                renderCustomerList();
+            });
+            filterTotalButton.addEventListener('click', () => {
+                currentTableFilter = 'total';
+                updateFilterButtons();
+                renderCustomerList();
+            });
+            resetButton.addEventListener('click', handleResetCoupons);
+            
+            // Listener fitur hapus
+            deleteButton.addEventListener('click', () => toggleDeleteMode(true));
+            cancelDeleteButton.addEventListener('click', () => toggleDeleteMode(false));
+            handleDeleteSelectedButton.addEventListener('click', showDeleteConfirmation);
+            cancelDeleteModalButton.addEventListener('click', hideDeleteConfirmation);
+            confirmDeleteButton.addEventListener('click', performDelete);
+            
+            // Listeners panel undian (LOGIKA BARU 100% MANUAL)
+            drawMonthlyButton.addEventListener('click', () => startDrawRound('monthly'));
+            drawGrandButton.addEventListener('click', () => startDrawRound('grand'));
+            stopDrawButton.addEventListener('click', cinematicStop);
+        });
+
+    </script>
+</body>
+</html>
+
