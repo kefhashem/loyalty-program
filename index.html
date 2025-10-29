@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Undian Loyalitas v2</title>
+    <!-- Judul diubah -->
+    <title>Sistem Input Pelanggan</title>
     <!-- Memuat Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com"></script> <!-- Perbaikan: URL Tailwind salah -->
     <!-- Memuat Google Font "Inter" -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- Memuat Tone.js untuk efek suara -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.min.js"></script>
+    <!-- Tone.js dihapus karena tidak ada undian -->
     
     <style>
         /* Menggunakan font Inter sebagai default */
@@ -46,77 +46,7 @@
             animation: spin 0.8s linear infinite;
         }
 
-        /* --- Gaya Visualizer Undian Baru --- */
-        #visualizer-stage {
-            background: linear-gradient(145deg, #232526, #414345);
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            position: relative;
-            border: 2px solid #555;
-            /* Tambahkan gradien atas & bawah untuk efek "fade" */
-            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
-            mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
-        }
-        
-        /* Jendela "Slot Machine" */
-        #visualizer-window {
-            height: 100px; /* Tinggi untuk satu nama */
-            overflow: hidden;
-            position: relative;
-        }
-        
-        /* Reel yang berputar */
-        #visualizer-reel {
-            width: 100%;
-            /* Transisi akan di-handle oleh JavaScript untuk pengereman */
-        }
-        
-        .reel-item {
-            height: 100px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.25rem; /* 3xl */
-            font-weight: 800; /* extra-bold */
-            color: #fff;
-            letter-spacing: -0.05em;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding: 0 1rem;
-            transition: all 0.3s ease; /* Transisi untuk efek hover/winner */
-        }
-        
-        /* Animasi "Terpilih" saat di-stop */
-        .reel-item.winner {
-            color: #fde047; /* Kuning cerah */
-            transform: scale(1.15);
-            text-shadow: 0 0 15px #fde047;
-        }
-        
-        /* Animasi Confetti Sederhana */
-        @keyframes confetti-fall {
-            0% { transform: translateY(-100px) rotateZ(0deg); opacity: 1; }
-            100% { transform: translateY(100vh) rotateZ(360deg); opacity: 0; }
-        }
-        .confetti {
-            position: fixed;
-            width: 10px;
-            height: 10px;
-            background-color: #fde047;
-            opacity: 0;
-            animation: confetti-fall 3s linear infinite;
-            z-index: 1000;
-        }
-        #confetti-container {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 999;
-        }
+        /* --- CSS untuk Visualizer dan Confetti Dihapus --- */
         
         /* Gaya untuk Fitur Hapus */
         .delete-checkbox-container {
@@ -162,14 +92,14 @@
         </div>
     </div>
     
-    <!-- Kontainer Confetti -->
-    <div id="confetti-container"></div>
+    <!-- Kontainer Confetti Dihapus -->
 
     <!-- [VIEW 1] MENU UTAMA (DEFAULT) -->
     <div id="view-menu" class="view active">
         <div class="container mx-auto max-w-lg min-h-screen flex items-center justify-center p-4">
             <div class="w-full text-center">
-                <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Sistem Undian Loyalitas</h1>
+                <!-- Judul diubah -->
+                <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Sistem Input Pelanggan</h1>
                 <p class="text-lg text-gray-600 mb-10">Selamat datang, Admin!</p>
                 
                 <div id="authStatusMenu" class="mb-6 text-center p-3 rounded-md text-white bg-blue-500">
@@ -180,9 +110,7 @@
                     <button data-target="view-admin" class="nav-button bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 px-4 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed">
                         <span class="text-2xl">Input Data Transaksi</span>
                     </button>
-                    <button data-target="view-undian" id="nav-to-undian" class="nav-button bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-4 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span class="text-2xl">Buka Panel Undian</span>
-                    </button>
+                    <!-- Tombol Panel Undian Dihapus -->
                 </div>
             </div>
         </div>
@@ -190,7 +118,7 @@
 
     <!-- [VIEW 2] PANEL ADMIN (INPUT DATA) -->
     <div id="view-admin" class="view">
-        <div class="container mx-auto p-4 md:p-8 max-w-7xl"> <!-- Dibuat lebih lebar (7xl) -->
+        <div class="container mx-auto p-4 md:p-8 max-w-7xl">
             <button data-target="view-menu" class="nav-button text-blue-600 hover:underline mb-4">&larr; Kembali ke Menu Utama</button>
             <h1 class="text-3xl font-bold text-gray-800 mb-6">Panel Admin: Input Data</h1>
             
@@ -230,9 +158,9 @@
                     <!-- Tombol Reset Kupon -->
                     <div class="mt-8 border-t pt-4">
                          <button id="resetCoupons" class="w-full py-2 px-4 rounded-md text-sm text-white font-medium bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                            Reset Periode 6 Bulan (Mulai Baru)
-                        </button>
-                        <p class="text-xs text-gray-500 mt-2 text-center">Ini akan mengarsipkan dan mereset SEMUA kupon (bulanan dan total) untuk semua pelanggan.</p>
+                             Reset Periode 6 Bulan (Mulai Baru)
+                         </button>
+                         <p class="text-xs text-gray-500 mt-2 text-center">Ini akan mengarsipkan dan mereset SEMUA kupon (bulanan dan total) untuk semua pelanggan.</p>
                     </div>
                 </div>
                 
@@ -266,7 +194,6 @@
                                         <!-- Checkbox Header -->
                                     </th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pelanggan</th>
-                                    <!-- Diubah: Tgl Transaksi Terakhir -->
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tgl Transaksi Terakhir</th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Belanja</th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -284,62 +211,15 @@
         </div>
     </div>
     
-    <!-- [VIEW 3] PANEL UNDIAN (VISUAL) -->
-    <div id="view-undian" class="view">
-        <div class="container mx-auto p-4 md:p-8 max-w-4xl">
-            <button data-target="view-menu" class="nav-button text-blue-600 hover:underline mb-4">&larr; Kembali ke Menu Utama</button>
-            <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Panel Undian Visual</h1>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div class="bg-white p-4 rounded-lg shadow-md text-center">
-                    <h3 class="font-bold text-lg text-blue-600">Hadiah Bulanan (Bulan Ini)</h3>
-                    <p class="text-gray-700">3x Pemenang Smartwatch</p>
-                    <ul id="winner-list-monthly" class="text-sm text-gray-600 mt-2 h-20 overflow-y-auto">
-                        <li>-</li>
-                    </ul>
-                </div>
-                <div class="bg-white p-4 rounded-lg shadow-md text-center">
-                    <h3 class="font-bold text-lg text-purple-600">Hadiah Utama (6 Bulan)</h3>
-                    <p class="text-gray-700">1x Pemenang Motor/TV</p> 
-                    <ul id="winner-list-grand" class="text-sm text-gray-600 mt-2 h-20 overflow-y-auto">
-                        <li>-</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Visualizer Stage -->
-            <div id="visualizer-stage" class="relative">
-                <h2 id="draw-title" class="text-center text-xl font-semibold text-white mb-4">Tekan Tombol Undi</h2>
-                <p id="draw-stats" class="text-center text-sm text-gray-300 mb-4">(Hadiah: - | Pemenang: -)</p>
-                
-                <div id="visualizer-window">
-                    <div id="visualizer-reel">
-                        <div class="reel-item text-gray-400">Siap Mengundi...</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Tombol Kontrol Undian -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                <button id="drawMonthly" class="draw-button w-full py-3 px-4 rounded-md text-white font-semibold bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-50">
-                    UNDI BULANAN
-                </button>
-                <button id="drawGrand" class="draw-button w-full py-3 px-4 rounded-md text-white font-semibold bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-600 transition-all disabled:opacity-50">
-                    UNDI HADIAH UTAMA
-                </button>
-                <button id="stopDraw" class="w-full md:col-span-3 py-4 px-4 rounded-md text-white font-extrabold text-2xl bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all hidden animate-pulse">
-                    !! STOP UNDIAN !!
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- [VIEW 3] PANEL UNDIAN (VISUAL) Dihapus Seluruhnya -->
 
 
     <!-- Firebase SDK Scripts -->
     <script type="module">
         // Import fungsi-fungsi yang kita butuhkan dari Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // Hapus import auth
+        // import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
             getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
             collection, query, where, onSnapshot, getDocs, writeBatch, serverTimestamp, setLogLevel, arrayUnion
@@ -347,13 +227,23 @@
 
         // --- KONFIGURASI FIREBASE ---
         
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-loyalty-app-v2';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Konfigurasi Firebase Anda
+        const firebaseConfig = {
+          apiKey: "AIzaSyBx59amjE7PVC2Hu-cKQwLNDHAx73vWbYY",
+          authDomain: "loyalty-program-b178d.firebaseapp.com",
+          projectId: "loyalty-program-b178d",
+          storageBucket: "loyalty-program-b178d.firebasestorage.app",
+          messagingSenderId: "306530625845",
+          appId: "1:306530625845:web:300b02039a841df297447c",
+          measurementId: "G-7P8TLNWNX3"
+        };
+        
+        // Token tidak lagi digunakan
+        // const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // Inisialisasi Firebase
-        let app, db, auth;
-        let userId = null;
+        let app, db; // Hapus auth
+        // let userId = null; // Hapus userId
         let customersRef = null;
 
         // Global state
@@ -396,66 +286,7 @@
         const confirmDeleteButton = document.getElementById('confirmDeleteButton');
         const deleteCountSpan = document.getElementById('deleteCount');
         
-        // Undian View
-        const navToUndianButton = document.getElementById('nav-to-undian');
-        const drawMonthlyButton = document.getElementById('drawMonthly');
-        const drawGrandButton = document.getElementById('drawGrand');
-        const stopDrawButton = document.getElementById('stopDraw');
-        const drawTitle = document.getElementById('draw-title');
-        const drawStats = document.getElementById('draw-stats');
-        const visualizerReel = document.getElementById('visualizer-reel');
-        const winnerListMonthly = document.getElementById('winner-list-monthly');
-        const winnerListGrand = document.getElementById('winner-list-grand');
-        
-        // --- State Undian ---
-        let isDrawing = false; // Status reel berputar
-        let isStopping = false; // Status pengereman
-        let isDrawSessionActive = false; // Status sesi (misal: Bulanan) aktif
-        let activeAnimationId = null;
-        let currentLotteryHat = [];
-        let customerMap = {}; // { '08123': 'Budi (KD001)' }
-        let currentDrawType = ''; // 'monthly' or 'grand'
-        let targetWinners = 0;
-        let currentWinners = [];
-        let reelPosition = 0;
-        const itemHeight = 100; // Cocokkan dengan CSS
-        const spinVelocity = 25; // Kecepatan putaran konstan (piksel per frame)
-        
-        // --- Efek Suara (Tone.js) ---
-        let spinSynth = null;
-        let winSynth = null;
-        let audioInitialized = false;
-
-        // Fungsi inisialisasi suara (DIPANGGIL OLEH KLIK PENGGUNA)
-        async function initializeSounds() {
-            if (audioInitialized || typeof Tone === 'undefined') return;
-            
-            try {
-                await Tone.start();
-                
-                // Suara klik saat berputar (dibuat loop)
-                spinSynth = new Tone.NoiseSynth({
-                    noise: { type: 'white' },
-                    envelope: { attack: 0.001, decay: 0.05, sustain: 0 }
-                }).toDestination();
-                
-                // Suara pemenang
-                winSynth = new Tone.PolySynth(Tone.Synth, {
-                    volume: -10,
-                    oscillator: { type: "sine" },
-                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 }
-                }).toDestination();
-                
-                audioInitialized = true;
-                console.log("Konteks audio berhasil diinisialisasi.");
-                
-            } catch (error) {
-                console.error("Gagal menginisialisasi audio (Tone.js):", error);
-            }
-        }
-        
-        // Fungsi easing untuk pengereman
-        function easeOutQuad(t) { return t * (2 - t); }
+        // --- DOM Elemen, State, dan Fungsi Suara untuk Undian Dihapus ---
 
         // --- FUNGSI UTAMA (Auth & Setup) ---
 
@@ -470,24 +301,28 @@
             try {
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
-                auth = getAuth(app);
+                // auth = getAuth(app); // Hapus
                 
                 // setLogLevel('debug');
 
-                authStatusMenu.textContent = "Mengautentikasi...";
-                
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                // authStatusMenu.textContent = "Mengautentikasi..."; // Hapus
 
-                userId = auth.currentUser.uid;
-                authStatusMenu.textContent = `Terhubung (ID Sesi: ${userId.substring(0, 8)})`;
+                // Hapus semua blok sign-in
+                // if (initialAuthToken) {
+                //     await signInWithCustomToken(auth, initialAuthToken);
+                // } else {
+                //     // Fallback ke login anonim jika tidak ada token
+                //     await signInAnonymously(auth);
+                // }
+
+                // userId = auth.currentUser.uid; // Hapus
+                
+                // Ubah pesan status agar lebih relevan
+                authStatusMenu.textContent = `Terhubung ke Project: ${firebaseConfig.projectId}`;
                 authStatusMenu.classList.replace('bg-blue-500', 'bg-green-600');
 
-                // Diubah: Nama koleksi baru untuk v3 dengan riwayat
-                const collectionPath = `/artifacts/${appId}/users/${userId}/customers_v3`;
+                // Path koleksi disederhanakan untuk proyek Firebase standar.
+                const collectionPath = `customers_v3`;
                 customersRef = collection(db, collectionPath);
 
                 setupFirestoreListener();
@@ -521,11 +356,7 @@
             if (targetView) {
                 targetView.classList.add('active');
                 activeView = targetViewId;
-                
-                // Reset undian jika kembali ke menu
-                if (targetViewId === 'view-menu' && (isDrawing || isStopping || isDrawSessionActive)) {
-                    resetDrawSession();
-                }
+                // Logika reset undian dihapus
             }
         }
 
@@ -597,7 +428,13 @@
                 let lastTransactionDate = '---';
                 if (customer.lastTransactionDate) {
                     const ts = customer.lastTransactionDate;
-                    lastTransactionDate = new Date(ts.seconds * 1000).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+                    // Pastikan ts adalah objek timestamp firestore
+                    if (ts && typeof ts.seconds === 'number') {
+                         lastTransactionDate = new Date(ts.seconds * 1000).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+                    } else if (ts) {
+                        // Fallback jika formatnya tidak terduga
+                        lastTransactionDate = new Date(ts).toLocaleString('id-ID');
+                    }
                 }
 
                 tr.innerHTML = `
@@ -691,7 +528,7 @@
 
                 // Buat data transaksi baru
                 const newTransaction = {
-                    date: new Date(), // <-- PERBAIKAN: Gunakan new Date() untuk di dalam array
+                    date: new Date(), 
                     amount: purchaseAmount,
                     couponsGained: newCoupons,
                     monthKey: monthYear
@@ -708,8 +545,8 @@
                         coupons: {
                             [monthYear]: newCoupons 
                         },
-                        lastTransactionDate: transactionTimestamp, // Tgl transaksi terakhir (server)
-                        transactionHistory: [newTransaction] // Riwayat transaksi (client)
+                        lastTransactionDate: transactionTimestamp, 
+                        transactionHistory: [newTransaction] 
                     };
                     await addDoc(customersRef, newData);
                     showMessage(`${customerName} mendapatkan ${newCoupons} kupon baru untuk bulan ${monthYear}!`, 'success');
@@ -729,15 +566,15 @@
                     
                     const updateData = {
                         customerName: customerName, 
-                        customerCode: customerCode, // Update kode jika berubah
+                        customerCode: customerCode, 
                         grandTotalCoupons: newGrandTotal,
-                        totalPurchase: newTotalPurchase, // Update total belanja
+                        totalPurchase: newTotalPurchase, 
                         coupons: {
                             ...currentData.coupons, 
                             [monthYear]: newMonthlyCoupons 
                         },
-                        lastTransactionDate: transactionTimestamp, // Update tgl transaksi terakhir (server)
-                        transactionHistory: arrayUnion(newTransaction) // Tambah ke riwayat (client)
+                        lastTransactionDate: transactionTimestamp, 
+                        transactionHistory: arrayUnion(newTransaction) 
                     };
                     
                     await updateDoc(docRef, updateData);
@@ -832,327 +669,13 @@
         }
         
         
-        // --- FUNGSI UNDIAN VISUAL ---
+        // --- FUNGSI UNDIAN VISUAL (Dihapus) ---
         
-        function buildLotteryHat(type) {
-            currentLotteryHat = [];
-            customerMap = {};
-            const monthYear = new Date().toISOString().slice(0, 7);
-            
-            currentCustomerData.forEach(doc => {
-                const data = doc.data();
-                const id = data.customerPhone; // ID unik
-                
-                // Jangan ikutkan pemenang sebelumnya (jika ada)
-                if (currentWinners.find(winner => winner.id === id)) {
-                    return; 
-                }
-                
-                let couponsToUse = 0;
-                if (type === 'monthly') {
-                    couponsToUse = data.coupons?.[monthYear] || 0;
-                } else { // 'grand'
-                    couponsToUse = data.grandTotalCoupons || 0;
-                }
-                
-                if (couponsToUse > 0) {
-                    const name = `${data.customerName} (${data.customerCode})`; // Kode wajib
-                    customerMap[id] = name; 
-                    
-                    for (let i = 0; i < couponsToUse; i++) {
-                        currentLotteryHat.push(id);
-                    }
-                }
-            });
-            
-            // Acak topi undian
-            for (let i = currentLotteryHat.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [currentLotteryHat[i], currentLotteryHat[j]] = [currentLotteryHat[j], currentLotteryHat[i]];
-            }
-        }
-        
-        // Memulai putaran baru untuk pemenang berikutnya
-        function startDrawRound(type) {
-            if (isDrawing || isStopping) return; // Jangan mulai jika sedang berputar/berhenti
-            
-            // Jika ini putaran baru (bukan lanjutan dari sesi manual)
-            if (!isDrawSessionActive || type !== currentDrawType) {
-                isDrawSessionActive = true;
-                currentDrawType = type;
-                currentWinners = []; // Reset pemenang jika sesi baru
-                
-                if (type === 'monthly') {
-                    targetWinners = 3;
-                    winnerListMonthly.innerHTML = '<li>Mencari pemenang...</li>';
-                    winnerListGrand.innerHTML = '<li>-</li>';
-                } else {
-                    targetWinners = 1;
-                    winnerListGrand.innerHTML = '<li>Mencari pemenang...</li>';
-                    winnerListMonthly.innerHTML = '<li>-</li>';
-                }
-            }
-            
-            // Cek apakah target pemenang sudah tercapai
-            if (currentWinners.length >= targetWinners) {
-                showMessage(`Undian ${currentDrawType === 'monthly' ? 'Bulanan' : 'Utama'} sudah selesai. ${targetWinners} pemenang telah ditemukan.`, 'success');
-                resetDrawSession();
-                return;
-            }
-            
-            // Bangun topi undian, *tidak termasuk pemenang sebelumnya*
-            buildLotteryHat(type);
-            
-            if (currentLotteryHat.length === 0) {
-                const msg = type === 'monthly' ? `Bulan Ini (${new Date().toISOString().slice(0, 7)})` : "6 Bulan";
-                showMessage(`Tidak ada lagi kupon untuk diundi di undian ${msg}.`, 'error');
-                resetDrawSession(); 
-                return;
-            }
-            
-            isDrawing = true;
-            isStopping = false; 
-            toggleDrawButtons(true); // Nonaktifkan tombol utama
-            
-            const round = currentWinners.length + 1;
-            drawTitle.textContent = `Mencari Pemenang ke-${round} dari ${targetWinners}`;
-            const prize = currentDrawType === 'monthly' ? 'Smartwatch' : 'Motor/TV';
-            drawStats.textContent = `(Hadiah: ${prize} | Kupon Tersisa: ${currentLotteryHat.length})`;
-            
-            // Isi reel visualizer
-            populateVisualizerReel();
-            
-            // Mulai putaran
-            startReelAnimation();
-            
-            // Tampilkan tombol STOP
-            stopDrawButton.classList.remove('hidden');
-        }
-        
-        function populateVisualizerReel() {
-            visualizerReel.innerHTML = '';
-            // Buat daftar yang jauh lebih panjang dari topi untuk efek visual
-            const reelItems = [];
-            // Pastikan kita punya minimal ~100 item untuk diputar
-            const minReelSize = 100;
-            let i = 0;
-            
-            if (currentLotteryHat.length === 0) {
-                visualizerReel.appendChild(createReelItem("Kupon Habis", ""));
-                return;
-            }
-            
-            // Ambil semua nama unik dari customerMap yang ada di topi
-            const uniqueNamesInHat = [...new Set(currentLotteryHat)].map(id => ({ id: id, name: customerMap[id] }));
-
-            // Isi reel dengan nama-nama unik tersebut
-            while(reelItems.length < minReelSize) {
-                const item = uniqueNamesInHat[i % uniqueNamesInHat.length];
-                reelItems.push(item);
-                i++;
-            }
-            
-            // Acak daftar reel agar visualnya tidak urut
-            for (let i = reelItems.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [reelItems[i], reelItems[j]] = [reelItems[j], reelItems[i]];
-            }
-            
-            // Buat elemen DOM (2 set untuk loop)
-            const createSet = () => {
-                reelItems.forEach(item => {
-                    visualizerReel.appendChild(createReelItem(item.name, item.id));
-                });
-            };
-            createSet();
-            createSet(); // Duplikat untuk loop tak terbatas
-        }
-        
-        function createReelItem(name, id) {
-             const item = document.createElement('div');
-             item.className = 'reel-item';
-             item.textContent = name;
-             item.dataset.id = id; // Simpan ID di elemen
-             return item;
-        }
-
-        // FUNGSI PUTARAN KONSTAN
-        function startReelAnimation() {
-            if (!isDrawing || !visualizerReel) return;
-            
-            reelPosition += spinVelocity; // Kecepatan konstan
-            
-            const totalReelHeight = visualizerReel.scrollHeight / 2;
-            
-            if (totalReelHeight > 0) {
-                if (reelPosition >= totalReelHeight) {
-                    reelPosition -= totalReelHeight;
-                }
-            }
-            
-            visualizerReel.style.transform = `translateY(-${reelPosition}px)`;
-            
-            // Suara klik
-            if (spinSynth && Math.random() > 0.5) {
-                try { spinSynth.triggerAttackRelease("8n"); } catch(e) {}
-            }
-            
-            activeAnimationId = requestAnimationFrame(startReelAnimation);
-        }
-
-        // FUNGSI STOP (PENGEREMAN)
-        function cinematicStop() {
-            // Hanya bisa distop jika sedang berputar (isDrawing) dan belum pengereman (isStopping)
-            if (!isDrawing || isStopping || !activeAnimationId) return;
-            
-            isDrawing = false; // Hentikan loop animasi dasar
-            isStopping = true; // Masuk mode pengereman
-            cancelAnimationFrame(activeAnimationId);
-            activeAnimationId = null;
-            
-            // Sembunyikan tombol STOP
-            stopDrawButton.classList.add('hidden');
-            
-            // 1. Pilih pemenang SEBENARNYA dari topi
-            const winnerId = currentLotteryHat[Math.floor(Math.random() * currentLotteryHat.length)];
-            const winnerName = customerMap[winnerId];
-            
-            // 2. Tambahkan pemenang ke daftar
-            currentWinners.push({ id: winnerId, name: winnerName });
-            
-            // 3. Cari elemen pemenang di reel (cari di set kedua untuk loop)
-            const reelItems = Array.from(visualizerReel.children);
-            const totalReelHeight = visualizerReel.scrollHeight / 2;
-            let targetChild = null;
-
-            for (let i = Math.floor(reelItems.length / 2); i < reelItems.length; i++) {
-                 if (reelItems[i].dataset.id === winnerId) {
-                    targetChild = reelItems[i];
-                    break;
-                 }
-            }
-            
-            // Fallback jika tidak ketemu
-            if (!targetChild) {
-                targetChild = reelItems[reelItems.length - 5];
-            }
-            
-            // --- Logika Pengereman Sinematik ---
-            const startTime = performance.now();
-            const duration = 5000; // Durasi pengereman 5 detik
-            
-            const visualizerHeight = visualizerReel.clientHeight; 
-            const targetOffsetTop = targetChild.offsetTop;
-            const targetPosition = targetOffsetTop - (visualizerHeight / 2) + (itemHeight / 2);
-            const startPosition = reelPosition;
-
-            // Tentukan endPosition terdekat di MASA DEPAN
-            const currentRevolutionOffset = startPosition % totalReelHeight;
-            let endPosition = startPosition + (targetPosition - currentRevolutionOffset);
-
-            if (targetPosition < currentRevolutionOffset) {
-                endPosition += totalReelHeight;
-            }
-            
-            endPosition += (totalReelHeight * 2); // Tambah 2 putaran ekstra
-
-            // Tandai elemen pemenang
-            targetChild.classList.add('winner');
-            const firstSetWinner = reelItems.find(el => el.dataset.id === winnerId);
-            if(firstSetWinner) firstSetWinner.classList.add('winner');
-
-            // Mulai animasi pengereman
-            animateStop(startTime, duration, startPosition, endPosition, winnerId);
-        }
-        
-        function animateStop(startTime, duration, startPosition, endPosition, winnerId) {
-            const now = performance.now();
-            const elapsed = now - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            const easedProgress = easeOutQuad(progress); // Efek pengereman
-            reelPosition = startPosition + (endPosition - startPosition) * easedProgress;
-            
-            visualizerReel.style.transform = `translateY(-${reelPosition}px)`;
-            
-            if (progress < 1) {
-                activeAnimationId = requestAnimationFrame(() => animateStop(startTime, duration, startPosition, endPosition, winnerId));
-            } else {
-                // Animasi selesai
-                reelPosition = endPosition; // Snap ke posisi akhir
-                visualizerReel.style.transform = `translateY(-${reelPosition}px)`;
-                
-                if (spinSynth) spinSynth.triggerAttackRelease(0); // Hentikan noise
-                if (winSynth) {
-                    try { winSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "0.8s", Tone.now() + 0.1); } catch(e) {}
-                }
-                startConfetti();
-                
-                const winnerName = customerMap[winnerId];
-                drawTitle.textContent = `🎉 Pemenang ke-${currentWinners.length}: ${winnerName}! 🎉`;
-                updateWinnerLists();
-                
-                // Reset status pengereman, siap untuk putaran berikutnya
-                isStopping = false; 
-                
-                // Logika Lanjutan: Cek apakah sesi selesai
-                if (currentWinners.length >= targetWinners) {
-                    // Sesi Selesai
-                    showMessage(`Undian ${currentDrawType === 'monthly' ? 'Bulanan' : 'Utama'} telah selesai!`, 'success');
-                    isDrawSessionActive = false;
-                    toggleDrawButtons(false); // Aktifkan tombol utama
-                } else {
-                    // Masih ada pemenang lagi, aktifkan tombol undi lagi
-                    toggleDrawButtons(false); 
-                    drawStats.textContent = `Siap mencari pemenang ke-${currentWinners.length + 1}`;
-                }
-
-                setTimeout(stopConfetti, 4000); // Hentikan confetti setelah 4 detik
-            }
-        }
-        
-        // Reset Sesi Undian Penuh
-        function resetDrawSession() {
-            isDrawing = false;
-            isStopping = false;
-            isDrawSessionActive = false;
-            if (activeAnimationId) cancelAnimationFrame(activeAnimationId);
-            activeAnimationId = null;
-            
-            toggleDrawButtons(false);
-            stopDrawButton.classList.add('hidden'); // Sembunyikan tombol stop
-            
-            drawTitle.textContent = "Tekan Tombol Undi";
-            drawStats.textContent = "(Hadiah: - | Pemenang: -)";
-            visualizerReel.innerHTML = '<div class="reel-item text-gray-400">Siap Mengundi...</div>';
-            visualizerReel.style.transform = 'translateY(0)';
-            
-            winnerListMonthly.innerHTML = '<li>-</li>';
-            winnerListGrand.innerHTML = '<li>-</li>';
-            
-            currentWinners = [];
-            currentDrawType = '';
-            targetWinners = 0;
-            stopConfetti();
-        }
-        
-        function updateWinnerLists() {
-            const listId = currentDrawType === 'monthly' ? winnerListMonthly : winnerListGrand;
-            listId.innerHTML = '';
-            currentWinners.forEach((winner, index) => {
-                const li = document.createElement('li');
-                li.textContent = `Pemenang ${index + 1}: ${winner.name}`;
-                listId.appendChild(li);
-            });
-        }
         
         // --- FUNGSI RESET PERIODE ---
         
         async function handleResetCoupons() {
-            if (isDrawing || isStopping || isDrawSessionActive) {
-                showMessage("Tidak dapat mereset saat undian berlangsung.", 'error');
-                return;
-            }
+            // Pengecekan status undian dihapus
             
             showMessage("Memulai proses reset periode 6 bulan...", 'warning');
             
@@ -1190,10 +713,9 @@
                 await batch.commit();
                 
                 showMessage("Periode 6 Bulan telah direset. Semua kupon, total belanja, dan riwayat kembali ke 0.", 'success');
-                resetDrawSession(); // Reset total
+                // Panggilan resetDrawSession() dihapus
                 
-            } catch (error)
-{
+            } catch (error) {
                 console.error("Error resetting period:", error);
                 showMessage(`Gagal mereset periode: ${error.message}`, 'error');
             }
@@ -1238,39 +760,8 @@
             }, 4000);
         }
         
-        function toggleDrawButtons(isSpinningOrStopping) {
-             document.querySelectorAll('.draw-button').forEach(btn => {
-                btn.disabled = isSpinningOrStopping;
-                if(isSpinningOrStopping) btn.classList.add('opacity-50', 'cursor-not-allowed');
-                else btn.classList.remove('opacity-50', 'cursor-not-allowed');
-             });
-        }
+        // toggleDrawButtons() dan fungsi Confetti dihapus
         
-        // --- Confetti ---
-        let confettiInterval = null;
-        function startConfetti() {
-            const container = document.getElementById('confetti-container');
-            stopConfetti(); // Hentikan jika sudah berjalan
-            confettiInterval = setInterval(() => {
-                for (let i = 0; i < 5; i++) {
-                    const confetti = document.createElement('div');
-                    confetti.className = 'confetti';
-                    confetti.style.left = `${Math.random() * 100}vw`;
-                    confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
-                    confetti.style.animationDelay = `${Math.random() * 2}s`;
-                    confetti.style.width = `${Math.random() * 10 + 5}px`;
-                    confetti.style.height = confetti.style.width;
-                    confetti.style.opacity = Math.random() + 0.5;
-                    container.appendChild(confetti);
-                    
-                    setTimeout(() => confetti.remove(), 3000);
-                }
-            }, 200);
-        }
-        function stopConfetti() {
-            clearInterval(confettiInterval);
-        }
-
         // --- EVENT LISTENERS ---
         
         document.addEventListener('DOMContentLoaded', () => {
@@ -1283,9 +774,7 @@
                 });
             });
 
-            navToUndianButton.addEventListener('click', () => {
-                initializeSounds(); 
-            });
+            // Listener navToUndianButton dihapus
             
             // Listener panel admin
             transactionForm.addEventListener('submit', handleTransactionSubmit);
@@ -1308,10 +797,7 @@
             cancelDeleteModalButton.addEventListener('click', hideDeleteConfirmation);
             confirmDeleteButton.addEventListener('click', performDelete);
             
-            // Listeners panel undian (LOGIKA BARU 100% MANUAL)
-            drawMonthlyButton.addEventListener('click', () => startDrawRound('monthly'));
-            drawGrandButton.addEventListener('click', () => startDrawRound('grand'));
-            stopDrawButton.addEventListener('click', cinematicStop);
+            // Listener panel undian dihapus
         });
 
     </script>
