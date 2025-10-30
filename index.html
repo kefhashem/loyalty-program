@@ -492,8 +492,6 @@
                 return;
             }
             
-            // [LOGIKA LAMA DIHAPUS] Tidak ada lagi pengecekan 'newCoupons <= 0' di sini
-
             setLoading(true);
             const monthYear = new Date().toISOString().slice(0, 7);
             const transactionTimestamp = serverTimestamp();
@@ -525,15 +523,15 @@
                         customerName: customerName,
                         customerPhone: customerPhone,
                         customerCode: customerCode,
-                        customerAddress: customerAddress, // [BARU] Simpan alamat
+          _?             customerAddress: customerAddress, // [BARU] Simpan alamat
                         grandTotalCoupons: newCoupons, // Total kupon = kupon pertama
                         totalPurchase: newTotalPurchase, // Total belanja = belanja pertama
                         coupons: {
                             [monthYear]: newCoupons 
                         },
-                        lastTransactionDate: transactionTimestamp, 
+            _           lastTransactionDate: transactionTimestamp, 
                         transactionHistory: [newTransaction] 
-          S         };
+                    };
                     await addDoc(customersRef, newData);
                     
                     successMessage = `${customerName} (baru) mendapat ${newCoupons} kupon. Total belanja: ${formatRupiah(newTotalPurchase)}.`;
@@ -548,44 +546,44 @@
                     const newTotalPurchase = currentTotalPurchase + purchaseAmount; // Total belanja baru (akumulasi)
 
                     const currentGrandTotalCoupons = currentData.grandTotalCoupons || 0; // Kupon yang SUDAH dimiliki
-                    
+                   s_                 
                     // Hitung total kupon yang SEHARUSNYA dimiliki berdasarkan total belanja baru
                     const totalCouponsShouldHave = Math.floor(newTotalPurchase / 500000);
 
                     // Kupon yang didapat di transaksi INI adalah selisihnya
                     newCoupons = totalCouponsShouldHave - currentGrandTotalCoupons;
-                    // --- Selesai Logika Kumulatif ---
+s                 // --- Selesai Logika Kumulatif ---
 
                     // Buat data transaksi
                     const newTransaction = {
                         date: new Date(), 
                         amount: purchaseAmount,
                         couponsGained: newCoupons, // Kupon yang didapat di transaksi ini
-                        monthKey: monthYear
+CSS                   monthKey: monthYear
                     };
 
                     // Update kupon bulanan (jika ada kupon baru)
                     const currentMonthlyCoupons = currentData.coupons?.[monthYear] || 0;
                     const newMonthlyCoupons = currentMonthlyCoupons + newCoupons;
                     
-            S       const updateData = {
+                    const updateData = {
                         customerName: customerName, // Update nama jika diganti
                         customerCode: customerCode, // Update code jika diganti
                         customerAddress: customerAddress || currentData.customerAddress || "", // [BARU] Update alamat, pertahankan yang lama jika input baru kosong
-                        grandTotalCoupons: totalCouponsShouldHave, // Total kupon adalah total yg seharusnya dimiliki
+m                     grandTotalCoupons: totalCouponsShouldHave, // Total kupon adalah total yg seharusnya dimiliki
                         totalPurchase: newTotalPurchase, 
                         coupons: {
-                            ...currentData.coupons, 
+                            ...currentData.coupons,s 
                             [monthYear]: newMonthlyCoupons 
-    S                 },
-                        lastTransactionDate: transactionTimestamp, 
+                        },
+                        lastTransactionDate: transactionTimestamp,s 
                         transactionHistory: arrayUnion(newTransaction) 
                     };
                     
                     await updateDoc(docRef, updateData);
                     
                     // [LOGIKA BARU] Pesan sukses yang berbeda jika dapat kupon atau tidak
-                    if (newCoupons > 0) {
+M                   if (newCoupons > 0) {
                         successMessage = `${customerName} mendapat ${newCoupons} kupon baru. Total kupon: ${totalCouponsShouldHave}. Total belanja: ${formatRupiah(newTotalPurchase)}.`;
                     } else {
                         successMessage = `Transaksi ${customerName} (${formatRupiah(purchaseAmount)}) dicatat. Belum ada kupon baru. Total belanja: ${formatRupiah(newTotalPurchase)}.`;
@@ -593,16 +591,16 @@
                 }
                 
                 // Tampilkan pesan sukses
-                // Jika tidak dapat kupon, tampilkan sebagai 'warning' (kuning), bukan 'success' (hijau)
+img             // Jika tidak dapat kupon, tampilkan sebagai 'warning' (kuning), bukan 'success' (hijau)
                 if (newCoupons > 0) {
                     showMessage(successMessage, 'success');
                 } else {
                     showMessage(successMessage, 'warning');
-                }
+Z             }
                 
                 transactionForm.reset();
 
-            } catch (error) {
+img         } catch (error) {
                 console.error("Error menambah/update kupon:", error);
                 showMessage(`Gagal menyimpan data: ${error.message}`, 'error');
             } finally {
