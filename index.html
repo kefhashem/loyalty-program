@@ -135,18 +135,17 @@
                                    placeholder="Cth: Budi Santoso">
                         </div>
                         <div>
-                            <label for="customerCode" class="block text-sm font-medium text-gray-700">Kode Pelanggan (Wajib)</label>
-                            <!-- REQUIRED DIHAPUS -->
-                            <input type="text" id="customerCode" name="customerCode" 
-                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                   placeholder="Cth: KD0001">
-                        </div>
+                            <label for="customerAddress" class="block text-sm font-medium text-gray-700">Alamat</label>
+                            <textarea id="customerAddress" name="customerAddress" rows="3"
+                                      class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                      placeholder="Cth: Jl. Pahlawan No. 1, Semarang"></textarea>
+                        </div>
                         <div>
                             <label for="purchaseAmount" class="block text-sm font-medium text-gray-700">Jumlah Pembelian (IDR)</label>
                             <!-- MIN dan REQUIRED DIHAPUS -->
                             <input type="number" id="purchaseAmount" name="purchaseAmount" step="1000"
                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                   placeholder="Min: 500000">
+                                   s    placeholder="Cth: 150000">
                         </div>
                         <button type="submit" id="submitButton" class="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             <span id="submitText">Tambah Kupon</span>
@@ -464,104 +463,152 @@
             }
         }
 
-        // --- FUNGSI BISNIS (Submit) ---
+// --- FUNGSI BISNIS (Submit) ---
 
-        async function handleTransactionSubmit(e) {
-            e.preventDefault();
-            if (!customersRef) {
-                showMessage("Database belum siap. Silakan coba lagi.", 'error');
-                return;
-            }
+        async function handleTransactionSubmit(e) {
+            e.preventDefault();
+            if (!customersRef) {
+                showMessage("Database belum siap. Silakan coba lagi.", 'error');
+                return;
+            }
 
-            const customerName = customerNameInput.value.trim();
-            const purchaseAmount = parseInt(purchaseAmountInput.value, 10);
-            const customerPhone = customerPhoneInput.value.trim();
-            const customerCode = customerCodeInput.value.trim(); // Wajib
+            // --- 1. Ambil SEMUA nilai input ---
+            const customerName = customerNameInput.value.trim();
+            const purchaseAmount = parseInt(purchaseAmountInput.value, 10);
+            const customerPhone = customerPhoneInput.value.trim();
+            const customerCode = customerCodeInput.value.trim();
+            // [BARU] Ambil nilai Alamat
+            const customerAddress = document.getElementById('customerAddress').value.trim();
 
-            // ** Validasi kini sepenuhnya ditangani oleh JavaScript **
-            if (!customerName || !purchaseAmount || !customerPhone || !customerCode) {
-                showMessage("Semua kolom (Nama, Kode, Telepon, Jumlah) tidak boleh kosong.", 'error');
-                return;
-            }
+            // --- 2. Validasi Input ---
+            if (!customerName || !purchaseAmount || !customerPhone || !customerCode) {
+                showMessage("Semua kolom (Nama, Kode, Telepon, Jumlah) tidak boleh kosong.", 'error');
+                return;
+            }
 
-            const newCoupons = Math.floor(purchaseAmount / 500000);
-            if (newCoupons <= 0) {
-                showMessage("Jumlah pembelian tidak cukup untuk mendapatkan kupon (min 500.000).", 'warning');
-                return;
-            }
+            // [LOGIKA BARU] Pembelian boleh berapa saja, asal di atas 0
+            if (purchaseAmount <= 0) {
+                showMessage("Jumlah pembelian harus lebih dari 0.", 'warning');
+                return;
+            }
+            
+            // [LOGIKA LAMA DIHAPUS] Tidak ada lagi pengecekan 'newCoupons <= 0' di sini
 
-            setLoading(true);
-            const monthYear = new Date().toISOString().slice(0, 7);
-            const transactionTimestamp = serverTimestamp(); // Timestamp untuk 'lastTransactionDate'
+            setLoading(true);
+            const monthYear = new Date().toISOString().slice(0, 7);
+            const transactionTimestamp = serverTimestamp();
 
-            try {
-                const q = query(customersRef, where("customerPhone", "==", customerPhone));
-                const querySnapshot = await getDocs(q);
+            // Variabel untuk kupon baru & pesan sukses
+            let newCoupons = 0;
+            let successMessage = "";
 
-                // Buat data transaksi baru
-                const newTransaction = {
-                    date: new Date(), 
-                    amount: purchaseAmount,
-                    couponsGained: newCoupons,
-                    monthKey: monthYear
-                };
+            try {
+                const q = query(customersRef, where("customerPhone", "==", customerPhone));
+                const querySnapshot = await getDocs(q);
 
-                if (querySnapshot.empty) {
-                    // Pelanggan baru
-                    const newData = {
-                        customerName: customerName,
-                        customerPhone: customerPhone,
-                        customerCode: customerCode,
-                        grandTotalCoupons: newCoupons,
-                        totalPurchase: purchaseAmount, 
-                        coupons: {
-                            [monthYear]: newCoupons 
-                        },
-                        lastTransactionDate: transactionTimestamp, 
-                        transactionHistory: [newTransaction] 
-                    };
-                    await addDoc(customersRef, newData);
-                    showMessage(`${customerName} mendapatkan ${newCoupons} kupon baru untuk bulan ${monthYear}!`, 'success');
-                } else {
-                    // Pelanggan lama, update kupon
-                    const docRef = querySnapshot.docs[0].ref;
-                    const currentData = querySnapshot.docs[0].data();
-                    
-                    const currentMonthlyCoupons = currentData.coupons?.[monthYear] || 0;
-                    const newMonthlyCoupons = currentMonthlyCoupons + newCoupons;
-                    
-                    const currentGrandTotal = currentData.grandTotalCoupons || 0;
-                    const newGrandTotal = currentGrandTotal + newCoupons;
-                    
-                    const currentTotalPurchase = currentData.totalPurchase || 0;
-                    const newTotalPurchase = currentTotalPurchase + purchaseAmount;
-                    
-                    const updateData = {
-                        customerName: currentData.customerName, // Pertahankan nama dan kode yang sudah ada, tapi update untuk memastikan konsistensi
-                        customerCode: currentData.customerCode, 
-                        grandTotalCoupons: newGrandTotal,
-                        totalPurchase: newTotalPurchase, 
-                        coupons: {
-                            ...currentData.coupons, 
-                            [monthYear]: newMonthlyCoupons 
-                        },
-                        lastTransactionDate: transactionTimestamp, 
-                        transactionHistory: arrayUnion(newTransaction) 
-                    };
-                    
-                    await updateDoc(docRef, updateData);
-                    showMessage(`${customerName} mendapat ${newCoupons} kupon. Total bulan ini: ${newMonthlyCoupons}. Total 6 bulan: ${newGrandTotal}.`, 'success');
-                }
-                
-                transactionForm.reset();
+                if (querySnapshot.empty) {
+                    // --- PELANGGAN BARU ---
 
-            } catch (error) {
-                console.error("Error menambah/update kupon:", error);
-                showMessage(`Gagal menyimpan data: ${error.message}`, 'error');
-            } finally {
-                setLoading(false);
-            }
-        }
+                    // [LOGIKA BARU] Hitung kupon berdasarkan total belanja pertama ini
+                    const newTotalPurchase = purchaseAmount;
+                    newCoupons = Math.floor(newTotalPurchase / 500000); // Kupon pertama
+
+                    // Buat data transaksi
+                    const newTransaction = {
+                        date: new Date(), 
+                        amount: purchaseAmount,
+                        couponsGained: newCoupons, // Kupon yang didapat
+                        monthKey: monthYear
+                    };
+                    
+                    const newData = {
+                        customerName: customerName,
+                        customerPhone: customerPhone,
+                        customerCode: customerCode,
+                        customerAddress: customerAddress, // [BARU] Simpan alamat
+                        grandTotalCoupons: newCoupons, // Total kupon = kupon pertama
+                        totalPurchase: newTotalPurchase, // Total belanja = belanja pertama
+                        coupons: {
+                            [monthYear]: newCoupons 
+                        },
+                        lastTransactionDate: transactionTimestamp, 
+                        transactionHistory: [newTransaction] 
+          S         };
+                    await addDoc(customersRef, newData);
+                    
+                    successMessage = `${customerName} (baru) mendapat ${newCoupons} kupon. Total belanja: ${formatRupiah(newTotalPurchase)}.`;
+
+                } else {
+                    // --- PELANGGAN LAMA ---
+                    const docRef = querySnapshot.docs[0].ref;
+                    const currentData = querySnapshot.docs[0].data();
+                    
+                    // --- [LOGIKA KUMULATIF BARU] ---
+                    const currentTotalPurchase = currentData.totalPurchase || 0;
+                    const newTotalPurchase = currentTotalPurchase + purchaseAmount; // Total belanja baru (akumulasi)
+
+                    const currentGrandTotalCoupons = currentData.grandTotalCoupons || 0; // Kupon yang SUDAH dimiliki
+                    
+                    // Hitung total kupon yang SEHARUSNYA dimiliki berdasarkan total belanja baru
+                    const totalCouponsShouldHave = Math.floor(newTotalPurchase / 500000);
+
+                    // Kupon yang didapat di transaksi INI adalah selisihnya
+                    newCoupons = totalCouponsShouldHave - currentGrandTotalCoupons;
+                    // --- Selesai Logika Kumulatif ---
+
+                    // Buat data transaksi
+                    const newTransaction = {
+                        date: new Date(), 
+                        amount: purchaseAmount,
+                        couponsGained: newCoupons, // Kupon yang didapat di transaksi ini
+                        monthKey: monthYear
+                    };
+
+                    // Update kupon bulanan (jika ada kupon baru)
+                    const currentMonthlyCoupons = currentData.coupons?.[monthYear] || 0;
+                    const newMonthlyCoupons = currentMonthlyCoupons + newCoupons;
+                    
+            S       const updateData = {
+                        customerName: customerName, // Update nama jika diganti
+                        customerCode: customerCode, // Update code jika diganti
+                        customerAddress: customerAddress || currentData.customerAddress || "", // [BARU] Update alamat, pertahankan yang lama jika input baru kosong
+                        grandTotalCoupons: totalCouponsShouldHave, // Total kupon adalah total yg seharusnya dimiliki
+                        totalPurchase: newTotalPurchase, 
+                        coupons: {
+                            ...currentData.coupons, 
+                            [monthYear]: newMonthlyCoupons 
+    S                 },
+                        lastTransactionDate: transactionTimestamp, 
+                        transactionHistory: arrayUnion(newTransaction) 
+                    };
+                    
+                    await updateDoc(docRef, updateData);
+                    
+                    // [LOGIKA BARU] Pesan sukses yang berbeda jika dapat kupon atau tidak
+                    if (newCoupons > 0) {
+                        successMessage = `${customerName} mendapat ${newCoupons} kupon baru. Total kupon: ${totalCouponsShouldHave}. Total belanja: ${formatRupiah(newTotalPurchase)}.`;
+                    } else {
+                        successMessage = `Transaksi ${customerName} (${formatRupiah(purchaseAmount)}) dicatat. Belum ada kupon baru. Total belanja: ${formatRupiah(newTotalPurchase)}.`;
+                    }
+                }
+                
+                // Tampilkan pesan sukses
+                // Jika tidak dapat kupon, tampilkan sebagai 'warning' (kuning), bukan 'success' (hijau)
+                if (newCoupons > 0) {
+                    showMessage(successMessage, 'success');
+                } else {
+                    showMessage(successMessage, 'warning');
+                }
+                
+                transactionForm.reset();
+
+            } catch (error) {
+                console.error("Error menambah/update kupon:", error);
+                showMessage(`Gagal menyimpan data: ${error.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
         
         // --- FUNGSI HAPUS PELANGGAN ---
         
